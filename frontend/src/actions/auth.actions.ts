@@ -32,7 +32,9 @@ export async function getServerSession() {
 export async function requireAuth() {
   const session = await getServerSession()
   if (!session) {
-    redirect('/auth/signin')
+    // A cookie that failed to verify has to be cleared first, see GET /api/auth/session
+    const hasCookie = (await cookies()).has(SESSION_COOKIE_NAME)
+    redirect(hasCookie ? '/api/auth/session' : '/auth/signin')
   }
   return session
 }

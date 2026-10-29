@@ -1,10 +1,13 @@
-import { redirect } from 'next/navigation'
-import { getServerSession } from '@/actions/auth.actions'
+import { requireAuth } from '@/actions/auth.actions'
 import { DashboardShell } from '@/components/layout/DashboardShell'
+import { getUserRole } from '@/features/attendance-gate/roles'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const session = await getServerSession()
-  if (!session) redirect('/auth/signin')
-
-  return <DashboardShell>{children}</DashboardShell>
+  const session = await requireAuth()
+  const role = await getUserRole(session.uid)
+  return (
+    <DashboardShell role={role} email={session.email ?? null}>
+      {children}
+    </DashboardShell>
+  )
 }
