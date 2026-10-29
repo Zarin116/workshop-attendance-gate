@@ -39,6 +39,18 @@ export async function POST(req: NextRequest) {
 }
 
 /**
+ * GET /api/auth/session
+ * Clear a session cookie that no longer verifies (expired or revoked) and go
+ * to sign in. Without this the proxy sees the cookie and sends the user back
+ * to /dashboard, which loops.
+ */
+export async function GET(req: NextRequest) {
+  const cookieStore = await cookies()
+  cookieStore.delete(SESSION_COOKIE_NAME)
+  return NextResponse.redirect(new URL('/auth/signin', req.url))
+}
+
+/**
  * DELETE /api/auth/session
  * Clear the session cookie (sign out server-side).
  */
