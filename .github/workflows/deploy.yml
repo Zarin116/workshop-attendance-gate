@@ -1,7 +1,11 @@
 name: Deploy to Production
 
+# Runs after the CI workflow finishes on main (a merged PR or a direct push).
+# Nothing deploys unless every CI job passed.
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
@@ -10,15 +14,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Frontend deploys are handled by Vercel's own GitHub integration — connect
-  # the repo in the Vercel dashboard and it deploys automatically on push.
-  # This job only handles what Firebase itself owns: Firestore security rules.
   deploy-firestore-rules:
     name: Deploy Firestore Rules
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment: production
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Authenticate to Google Cloud
         run: |
@@ -27,23 +31,24 @@ jobs:
 
       - name: Deploy Firestore rules
         run: |
-          npx firebase-tools deploy \
+          npx --yes firebase-tools@15 deploy \
             --only firestore:rules \
             --project ${{ secrets.FIREBASE_PROJECT_ID }} \
             --non-interactive
 
-  # Optional — only needed if this project actually uses backend/ (the Express
-  # API). Cloud Functions v2 requires the Blaze (pay-as-you-go) plan, so this
-  # never runs automatically — trigger it manually via "Run workflow" in the
-  # Actions tab once the Firebase project is on Blaze and you're ready to ship
-  # the backend.
-  deploy-functions:
-    name: Deploy Backend (optional, manual)
-    if: github.event_name == 'workflow_dispatch'
+  # Rules go first so the live app never runs against older rules.
+  deploy-frontend:
+    name: Deploy Frontend to Vercel
+    needs: deploy-firestore-rules
     runs-on: ubuntu-latest
     environment: production
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - uses: pnpm/action-setup@v4
         with:
@@ -54,20 +59,14 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
 
-      - name: Build backend
-        run: pnpm --filter backend build
+      - name: Pull Vercel project settings and env vars
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
-      - name: Authenticate to Google Cloud
-        run: |
-          echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 }}" | base64 --decode > /tmp/gcp-sa.json
-          echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-sa.json" >> $GITHUB_ENV
+      - name: Build
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
-      - name: Deploy Cloud Function
-        run: |
-          npx firebase-tools deploy \
-            --only functions \
-            --project ${{ secrets.FIREBASE_PROJECT_ID }} \
-            --non-interactive
+      - name: Deploy
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
