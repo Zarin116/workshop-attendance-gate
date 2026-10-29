@@ -24,17 +24,24 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
-      - name: Authenticate to Google Cloud
-        run: |
-          echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 }}" | base64 --decode > /tmp/gcp-sa.json
-          echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-sa.json" >> $GITHUB_ENV
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Releases the rules through the Admin SDK, see the script for why
       - name: Deploy Firestore rules
-        run: |
-          npx --yes firebase-tools@15 deploy \
-            --only firestore:rules \
-            --project ${{ secrets.FIREBASE_PROJECT_ID }} \
-            --non-interactive
+        working-directory: frontend
+        run: node scripts/deploy-rules.mjs
+        env:
+          FIREBASE_SERVICE_ACCOUNT_KEY_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 }}
 
   # Rules go first so the live app never runs against older rules.
   deploy-frontend:
