@@ -13,14 +13,25 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing'
-import { collection, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore'
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  setDoc,
+  updateDoc,
+  where,
+} from 'firebase/firestore'
 
 let env: RulesTestEnvironment
 
 beforeAll(async () => {
   env = await initializeTestEnvironment({
     projectId: 'demo-attendance-gate',
-    firestore: { rules: readFileSync(resolve(__dirname, '../../../firebase/firestore.rules'), 'utf8') },
+    firestore: {
+      rules: readFileSync(resolve(__dirname, '../../../firebase/firestore.rules'), 'utf8'),
+    },
   })
 })
 

@@ -1,11 +1,6 @@
 import { collection, doc, type CollectionReference, type DocumentData } from 'firebase/firestore'
 import { getClientDb } from './client'
-import type {
-  AssessmentAccess,
-  AttendanceRecord,
-  UserProfile,
-  Workshop,
-} from '@/types/firestore'
+import type { AssessmentAccess, AttendanceRecord, UserProfile, Workshop } from '@/types/firestore'
 
 /**
  * Creates a typed Firestore collection reference.

@@ -8,12 +8,13 @@ const securityHeaders = [
   // Reduce referrer information leakage
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   // Disable browser features not used by this app
-  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), browsing-topics=()' },
+  {
+    key: 'Permissions-Policy',
+    value: 'camera=(), microphone=(), geolocation=(), browsing-topics=()',
+  },
 ]
 
 const nextConfig: NextConfig = {
-  // Keep the committed AGENTS.md as it is instead of letting the dev server rewrite it
-  agentRules: false,
   async headers() {
     return [
       {

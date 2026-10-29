@@ -63,7 +63,10 @@ vi.mock('server-only', () => ({}))
 const session = { uid: 'facilitator-1' }
 vi.mock('@/actions/auth.actions', () => ({ requireAuth: vi.fn(async () => session) }))
 
-import { createWorkshop, markAttendance } from '@/features/attendance-gate/actions/attendance.actions'
+import {
+  createWorkshop,
+  markAttendance,
+} from '@/features/attendance-gate/actions/attendance.actions'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -159,7 +162,11 @@ describe('markAttendance', () => {
 })
 
 describe('createWorkshop', () => {
-  const input = { title: 'Copyediting basics', moduleNumber: 1, startsAt: '2026-11-03T09:00:00.000Z' }
+  const input = {
+    title: 'Copyediting basics',
+    moduleNumber: 1,
+    startsAt: '2026-11-03T09:00:00.000Z',
+  }
 
   it('creates the workshop with a module-based id', async () => {
     store.delete('workshops/module-1')
