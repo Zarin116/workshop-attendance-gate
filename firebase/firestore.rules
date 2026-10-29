@@ -21,6 +21,16 @@ service cloud.firestore {
         && get(userPath).data.role == 'admin';
     }
 
+    // Facilitator role lives on users/{uid}.role. Users cannot give it to
+    // themselves: the users rules below only allow role == 'user' on create
+    // and block any change to role on update.
+    function isFacilitator() {
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return isAuthenticated()
+        && exists(userPath)
+        && get(userPath).data.role == 'facilitator';
+    }
+
     // Role checked against Firebase Auth custom claims — no Firestore read needed.
     // Set custom claims via Admin SDK: adminAuth.setCustomUserClaims(uid, { admin: true })
     function hasCustomClaim(claim) {
@@ -40,7 +50,7 @@ service cloud.firestore {
     // Admins can read any profile.
     // Creation is triggered by AuthProvider on first sign-in (syncUserProfile).
     match /users/{userId} {
-      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin()) && notDeleted();
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin() || isFacilitator()) && notDeleted();
 
       allow create: if isAuthenticated() && isOwner(userId)
         && request.resource.data.uid == request.auth.uid
@@ -54,6 +64,33 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['uid', 'email', 'displayName', 'photoURL', 'role', 'createdAt', 'updatedAt', '_schemaVersion']);
 
       allow delete: if false; // soft-delete only — set deletedAt field instead
+    }
+
+    // ── Workshop attendance gate ───────────────────────────────────────────
+    // All writes go through Server Actions (Admin SDK), which check the
+    // facilitator role first. The client SDK can only read, so a student can
+    // never mark their own attendance or unlock the assessment from the browser.
+
+    // workshops/{workshopId}: every signed-in user can see the schedule.
+    match /workshops/{workshopId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    // attendance/{workshopId_studentUid}: a student sees only their own
+    // records. Rules are not filters, so a student query must include
+    // where('studentUid', '==', uid) or it is rejected.
+    match /attendance/{recordId} {
+      allow read: if isFacilitator()
+        || (isAuthenticated() && resource.data.studentUid == request.auth.uid);
+      allow write: if false;
+    }
+
+    // assessment_access/{studentUid}: gate result, written by markAttendance only.
+    match /assessment_access/{studentUid} {
+      allow read: if isFacilitator()
+        || (isAuthenticated() && resource.data.studentUid == request.auth.uid);
+      allow write: if false;
     }
 
     // Add new collection rules above this comment using the /firebase-collection skill.

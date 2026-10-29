@@ -12,6 +12,8 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
+  // Keep the committed AGENTS.md as it is instead of letting the dev server rewrite it
+  agentRules: false,
   async headers() {
     return [
       {

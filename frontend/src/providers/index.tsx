@@ -12,7 +12,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
       {children}
-      <Toaster richColors position="top-right" />
+      <Toaster richColors position="bottom-right" />
     </AuthProvider>
   )
 }

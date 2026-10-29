@@ -12,6 +12,7 @@
     "build": "pnpm --filter frontend build && pnpm --filter backend build",
     "test": "pnpm --filter backend test",
     "test:component": "pnpm --filter frontend test",
+    "test:rules": "npx --yes firebase-tools@15 emulators:exec --only firestore --project demo-attendance-gate \"pnpm --filter frontend test:rules\"",
     "test:all": "pnpm run test && pnpm run test:component",
     "lint": "pnpm -r lint",
     "format": "pnpm -r format",
